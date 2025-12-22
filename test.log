@@ -1,0 +1,52 @@
+make[1]: Entering directory '/workspaces/p2-assignment5larry'
+mkdir -p mnt || true
+./nufs -s -f mnt filesystem-data.bin
+make[1]: Entering directory '/workspaces/p2-assignment5larry'
+fusermount -u mnt || true
+getattr(/large.txt) -> (-2) {mode: 0000, size: 0}
++ alloc_inode() -> 8
+mknod(/large.txt, 100644) -> 0
+getattr(/large.txt) -> (0) {mode: 100644, size: 0}
+open(/large.txt) -> 0
+ioctl(/large.txt, 21505, ...) -> -1
++ alloc_block() -> 11
+write(/large.txt, 4096 bytes, @+0) -> 4096
+write(/large.txt, 2049 bytes, @+4096) -> -27
+write(/large.txt, 2049 bytes, @+4096) -> -27
+getattr(/) -> (0) {mode: 40755, size: 160}
+getattr(/) -> (0) {mode: 40755, size: 160}
+getattr(/2k.txt) -> (0) {mode: 100644, size: 2001}
+getattr(/two.txt) -> (0) {mode: 100644, size: 11}
+getattr(/foo) -> (0) {mode: 40755, size: 64}
+getattr(/tmp) -> (0) {mode: 40755, size: 0}
+getattr(/large.txt) -> (0) {mode: 100644, size: 4096}
+readdir(/) -> 0
+getattr(/large.txt) -> (0) {mode: 100644, size: 4096}
+open(/large.txt) -> 0
+ioctl(/large.txt, 21505, ...) -> -1
+read(/large.txt, 4096 bytes, @+0) -> 4096
+getattr(/larger.txt) -> (-2) {mode: 0000, size: 0}
++ alloc_inode() -> 9
+mknod(/larger.txt, 100644) -> 0
+getattr(/larger.txt) -> (0) {mode: 100644, size: 0}
+open(/larger.txt) -> 0
+ioctl(/larger.txt, 21505, ...) -> -1
++ alloc_block() -> 12
+write(/larger.txt, 4096 bytes, @+0) -> 4096
+write(/larger.txt, 4096 bytes, @+4096) -> -27
+write(/larger.txt, 4096 bytes, @+4096) -> -27
+getattr(/) -> (0) {mode: 40755, size: 192}
+getattr(/) -> (0) {mode: 40755, size: 192}
+getattr(/2k.txt) -> (0) {mode: 100644, size: 2001}
+getattr(/two.txt) -> (0) {mode: 100644, size: 11}
+getattr(/foo) -> (0) {mode: 40755, size: 64}
+getattr(/tmp) -> (0) {mode: 40755, size: 0}
+getattr(/large.txt) -> (0) {mode: 100644, size: 4096}
+getattr(/larger.txt) -> (0) {mode: 100644, size: 4096}
+readdir(/) -> 0
+getattr(/larger.txt) -> (0) {mode: 100644, size: 4096}
+open(/larger.txt) -> 0
+ioctl(/larger.txt, 21505, ...) -> -1
+read(/larger.txt, 4096 bytes, @+0) -> 4096
+make[1]: Leaving directory '/workspaces/p2-assignment5larry'
+make[1]: Leaving directory '/workspaces/p2-assignment5larry'
