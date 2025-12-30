@@ -1,7 +1,7 @@
 #pragma once
 
 extern "C" {
-#include "helpers/bitmap/bitmap.h"
+#include "bitmap.h"
 }
 
 namespace nufs {
@@ -22,5 +22,4 @@ public:
 };
 
 } // namespace nufs
-
 

@@ -21,6 +21,8 @@ extern "C" {
 #include "helpers/storage/storage.h"
 }
 
+#include "helpers/storage/storage_cpp.hpp"
+
 // initialize a new inode with standard fields (C++ version)
 static void init_inode_cpp(inode_t* inode, mode_t mode) {
   inode->mode = mode;
@@ -47,7 +49,7 @@ int nufs_access_cpp(const char* path, int mask) {
 }
 
 int nufs_getattr_cpp(const char* path, struct stat* st) {
-  int rv = storage_stat(path, st);
+  int rv = nufs::Storage::statPath(path, st);
   std::printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n",
               path, rv, st->st_mode, st->st_size);
   return rv;
@@ -86,7 +88,7 @@ int nufs_readdir_cpp(const char* path, void* buf, fuse_fill_dir_t filler,
   }
 
   int count = 0;
-  char** list = storage_list(path, &count);
+  char** list = nufs::Storage::list(path, &count);
 
   for (int i = 0; i < count; i++) {
     char child_path[256];
@@ -102,7 +104,7 @@ int nufs_readdir_cpp(const char* path, void* buf, fuse_fill_dir_t filler,
     }
   }
 
-  storage_list_free(list, count);
+  nufs::Storage::listFree(list, count);
 
   std::printf("readdir(%s) -> %d\n", path, 0);
   return 0;
@@ -521,7 +523,7 @@ int main(int argc, char* argv[]) {
 
   // Last argument is the filesystem image path, as in the C version.
   argc--;
-  storage_init(argv[argc]);
+  nufs::Storage::init(argv[argc]);
 
   struct fuse_operations ops;
   nufs_init_ops_cpp(&ops);
