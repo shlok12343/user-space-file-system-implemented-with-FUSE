@@ -1,6 +1,4 @@
-This is the starter code for [Project 2][p2-link]. The following contents are provided:
 
-- [Makefile](Makefile)   - Targets are explained in the assignment text
 - [README.md](README.md) - This README
 - [helpers](helpers)     - Helper code implementing access to bitmaps and blocks
 - [hints](hints)         - Incomplete bits and pieces that you might want to use as inspiration

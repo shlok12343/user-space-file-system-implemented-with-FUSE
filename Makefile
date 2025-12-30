@@ -6,14 +6,24 @@ HDRS := $(wildcard *.h) $(wildcard helpers/*/*.h)
 CFLAGS := -g `pkg-config fuse --cflags` -I. -Ihelpers -Ihelpers/bitmap -Ihelpers/blocks -Ihelpers/storage
 LDLIBS := `pkg-config fuse --libs`
 
+CC := gcc
+CXX := g++
+CXXFLAGS := $(CFLAGS)
+
 nufs: $(OBJS)
-	gcc $(CFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+nufs_cpp: nufs_cpp.o $(filter-out nufs.o,$(OBJS))
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
 
 %.o: %.c $(HDRS)
-	gcc $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.o: %.cpp $(HDRS)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean: unmount
-	rm -f nufs *.o test.log filesystem-data.bin
+	rm -f nufs nufs_cpp *.o test.log filesystem-data.bin
 	rmdir mnt || true
 
 mount: nufs
