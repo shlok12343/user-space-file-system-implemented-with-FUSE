@@ -1,14 +1,12 @@
 ---
 :id: 376157423
 :submitters:
-- :name: Lawrence Xie
-  :email: xie.law@northeastern.edu
-- :name: Satyasai Kompella
-  :email: kompella.sa@northeastern.edu
+- :name: Shlok Nanani
+  :email: nanani.sh@northeastern.edu
 :created_at: !ruby/object:ActiveSupport::TimeWithZone
-  utc: 2025-12-08 02:59:37.772452000 Z
+  utc: 2025-12-04 02:59:37.772452000 Z
   zone: !ruby/object:ActiveSupport::TimeZone
-    name: America/Los_Angeles
-  time: 2025-12-07 18:59:37.772452000 Z
+    name: America/Boston
+  time: 2025-12-06 18:59:37.772452000 Z
 :status: processed
-:score: 95.0
+:score: 100.0
