@@ -70,7 +70,7 @@ int nufs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 
   filler(buf, ".", &st, 0);
 
-  // We only support the root directory now
+  
   if (strcmp(path, "/") != 0) {
     return -ENOTDIR;
   }
@@ -94,7 +94,7 @@ int nufs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-// mknod makes a filesystem object like a file or directory
+// mknod makes a filesystem object like a file or directory(touch)
 // called for: man 2 open, man 2 link
 int nufs_mknod(const char* path, mode_t mode, dev_t rdev) {
   // In a flat filesystem, the parent is always root
@@ -131,9 +131,9 @@ int nufs_mknod(const char* path, mode_t mode, dev_t rdev) {
 }
 
 int nufs_mkdir(const char* path, mode_t mode) {
-  return -EPERM; // Directories are not supported
+  return -EPERM;
 }
-
+// (rm)
 int nufs_unlink(const char* path) {
   if (path[0] != '/' || strrchr(path, '/') != path) {
     return -ENOENT;
