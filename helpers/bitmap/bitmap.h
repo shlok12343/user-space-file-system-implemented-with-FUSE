@@ -1,6 +1,5 @@
 /**
  * @file bitmap.h
- * @author CS3650 staff
  *
  * A bitmap interface.
  */

@@ -18,10 +18,6 @@ public:
     return get_inode_by_path(path);
   }
 
-  static int parsePathParent(const char* path, char** path_copy_out, char** name_out) {
-    return parse_path_parent(path, path_copy_out, name_out);
-  }
-
   static int statPath(const char* path, struct stat* st) {
     return storage_stat(path, st);
   }

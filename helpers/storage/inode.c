@@ -28,7 +28,6 @@ void print_inode(inode_t* node) {
          node->mtime);
 }
 
-// assuming files are max 4KB, only need one block, so not needed
 // copied from initial inode.h
 int grow_inode(inode_t* node, int size) {
   if (node->block == 0) {

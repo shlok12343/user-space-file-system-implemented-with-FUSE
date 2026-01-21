@@ -10,54 +10,56 @@
 
 #include "helpers/bitmap/bitmap.h"
 #include "helpers/blocks/blocks.h"
-#include "helpers/directory/directory.h"
 
 #define ROOT_INUM 0
+
+int directory_lookup(inode_t* node, const char* name) {
+  if (node->block == 0) return -1;
+  dirent_t* entries = (dirent_t*)blocks_get_block(node->block);
+  int num_entries = node->size / sizeof(dirent_t);
+  for (int i = 0; i < num_entries; i++) {
+    if (strcmp(entries[i].name, name) == 0) {
+      return entries[i].inum;
+    }
+  }
+  return -1;
+}
+
+int directory_put(inode_t* node, const char* name, int inum) {
+  if (node->block == 0) {
+    node->block = alloc_block();
+    if (node->block < 0) return -ENOSPC;
+  }
+  dirent_t* entries = (dirent_t*)blocks_get_block(node->block);
+  int num_entries = node->size / sizeof(dirent_t);
+  if (num_entries >= DIRENTS_PER_BLOCK) return -ENOSPC;
+  
+  strncpy(entries[num_entries].name, name, DIR_NAME_LENGTH);
+  entries[num_entries].inum = inum;
+  node->size += sizeof(dirent_t);
+  return 0;
+}
+
+int directory_delete(inode_t* node, const char* name) {
+  if (node->block == 0) return -ENOENT;
+  dirent_t* entries = (dirent_t*)blocks_get_block(node->block);
+  int num_entries = node->size / sizeof(dirent_t);
+  for (int i = 0; i < num_entries; i++) {
+    if (strcmp(entries[i].name, name) == 0) {
+      // Simple delete: swap with last entry
+      entries[i] = entries[num_entries - 1];
+      node->size -= sizeof(dirent_t);
+      return 0;
+    }
+  }
+  return -ENOENT;
+}
 
 /**
  * parse a path into parent directory inode and filename
  * returns parent inode number on success, negative error code on failure
  * 'name' parameter will point to the filename within path_copy
  */
-int parse_path_parent(const char* path, char** path_copy_out, char** name_out) {
-  *path_copy_out = malloc(strlen(path) + 1);
-  strcpy(*path_copy_out, path);
-
-  char* last_slash = strrchr(*path_copy_out, '/');
-  if (last_slash == NULL) {
-    free(*path_copy_out);
-    return -EINVAL;
-  }
-
-  *name_out = last_slash + 1;
-  if (strlen(*name_out) == 0 || strlen(*name_out) >= DIR_NAME_LENGTH) {
-    free(*path_copy_out);
-    return -ENAMETOOLONG;
-  }
-
-  int parent_inum;
-  if (last_slash == *path_copy_out) {
-    parent_inum = ROOT_INUM;
-  } else {
-    *last_slash = '\0';
-    parent_inum = get_inode_by_path(*path_copy_out);
-    *last_slash = '/';
-  }
-
-  if (parent_inum < 0) {
-    free(*path_copy_out);
-    return -ENOENT;
-  }
-
-  inode_t* parent = get_inode(parent_inum);
-  if (!S_ISDIR(parent->mode)) {
-    free(*path_copy_out);
-    return -ENOTDIR;
-  }
-
-  return parent_inum;
-}
-
 void storage_init(const char* image_path) {
   blocks_init(image_path);
 
@@ -88,37 +90,12 @@ int get_inode_by_path(const char* path) {
   if (strcmp(path, "/") == 0) {
     return ROOT_INUM;
   }
+   // Just get the name after the first '/'
+   const char* filename = path + 1; 
 
-  char* path_copy = malloc(strlen(path) + 1);
-  strcpy(path_copy, path);
-
-  int current_inum = ROOT_INUM;
-
-  char* token = strtok(path_copy, "/");
-  while (token != NULL) {
-    if (strlen(token) == 0) {
-      token = strtok(NULL, "/");
-      continue;
-    }
-
-    inode_t* current_inode = get_inode(current_inum);
-    if (!S_ISDIR(current_inode->mode)) {
-      free(path_copy);
-      return -1;
-    }
-
-    int next_inum = directory_lookup(current_inode, token);
-    if (next_inum < 0) {
-      free(path_copy);
-      return -1;
-    }
-
-    current_inum = next_inum;
-    token = strtok(NULL, "/");
-  }
-
-  free(path_copy);
-  return current_inum;
+   // Look it up once in the root
+   inode_t* root_node = get_inode(ROOT_INUM);
+   return directory_lookup(root_node, filename);
 }
 
 int storage_stat(const char* path, struct stat* st) {

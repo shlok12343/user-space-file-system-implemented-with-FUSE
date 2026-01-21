@@ -14,7 +14,6 @@
 #include <fuse.h>
 
 #include "helpers/blocks/blocks.h"
-#include "helpers/directory/directory.h"
 #include "helpers/storage/inode.h"
 #include "helpers/storage/storage.h"
 
@@ -71,21 +70,9 @@ int nufs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 
   filler(buf, ".", &st, 0);
 
+  // We only support the root directory now
   if (strcmp(path, "/") != 0) {
-    char parent_path[256];
-    strncpy(parent_path, path, sizeof(parent_path));
-    char* last_slash = strrchr(parent_path, '/');
-    if (last_slash != NULL) {
-      if (last_slash == parent_path) {
-        strcpy(parent_path, "/");
-      } else {
-        *last_slash = '\0';
-      }
-      rv = nufs_getattr(parent_path, &st);
-      if (rv == 0) {
-        filler(buf, "..", &st, 0);
-      }
-    }
+    return -ENOTDIR;
   }
 
   int count = 0;
@@ -93,11 +80,7 @@ int nufs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 
   for (int i = 0; i < count; i++) {
     char child_path[256];
-    if (strcmp(path, "/") == 0) {
-      snprintf(child_path, sizeof(child_path), "/%s", list[i]);
-    } else {
-      snprintf(child_path, sizeof(child_path), "%s/%s", path, list[i]);
-    }
+    snprintf(child_path, sizeof(child_path), "/%s", list[i]);
 
     rv = nufs_getattr(child_path, &st);
     if (rv == 0) {
@@ -114,26 +97,21 @@ int nufs_readdir(const char* path, void* buf, fuse_fill_dir_t filler,
 // mknod makes a filesystem object like a file or directory
 // called for: man 2 open, man 2 link
 int nufs_mknod(const char* path, mode_t mode, dev_t rdev) {
-  char* path_copy;
-  char* name;
-
-  int parent_inum = parse_path_parent(path, &path_copy, &name);
-  if (parent_inum < 0) {
-    printf("mknod(%s, %04o) -> %d\n", path, mode, parent_inum);
-    return parent_inum;
+  // In a flat filesystem, the parent is always root
+  if (path[0] != '/' || strrchr(path, '/') != path) {
+    return -EACCES; // Only allow files in root
   }
-
-  inode_t* parent = get_inode(parent_inum);
+  
+  const char* name = path + 1;
+  inode_t* parent = get_inode(0);
 
   if (directory_lookup(parent, name) >= 0) {
-    free(path_copy);
     printf("mknod(%s, %04o) -> %d\n", path, mode, -EEXIST);
     return -EEXIST;
   }
 
   int new_inum = alloc_inode();
   if (new_inum < 0) {
-    free(path_copy);
     printf("mknod(%s, %04o) -> %d\n", path, mode, -ENOSPC);
     return -ENOSPC;
   }
@@ -144,68 +122,28 @@ int nufs_mknod(const char* path, mode_t mode, dev_t rdev) {
   int rv = directory_put(parent, name, new_inum);
   if (rv < 0) {
     free_inode(new_inum);
-    free(path_copy);
     printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
     return rv;
   }
 
-  free(path_copy);
   printf("mknod(%s, %04o) -> %d\n", path, mode, 0);
   return 0;
 }
 
 int nufs_mkdir(const char* path, mode_t mode) {
-  char* path_copy;
-  char* name;
-  int parent_inum = parse_path_parent(path, &path_copy, &name);
-  if (parent_inum < 0) {
-    printf("mkdir(%s) -> %d\n", path, parent_inum);
-    return parent_inum;
-  }
-
-  inode_t* parent = get_inode(parent_inum);
-  int new_inum = alloc_inode();
-  if (new_inum < 0) {
-    free(path_copy);
-    printf("mkdir(%s) -> %d\n", path, -ENOSPC);
-    return -ENOSPC;
-  }
-  inode_t* new_dir_inode = get_inode(new_inum);
-  init_inode(new_dir_inode, S_IFDIR | mode);
-  new_dir_inode->block = alloc_block();
-  if (new_dir_inode->block < 0) {
-    free_inode(new_inum);
-    free(path_copy);
-    printf("mkdir(%s) -> %d\n", path, -ENOSPC);
-    return -ENOSPC;
-  }
-
-  int rv = directory_put(parent, name, new_inum);
-  if (rv < 0) {
-    free_block(new_dir_inode->block);
-    free_inode(new_inum);
-  }
-
-  free(path_copy);
-  printf("mkdir(%s) -> %d\n", path, rv);
-  return rv;
+  return -EPERM; // Directories are not supported
 }
 
 int nufs_unlink(const char* path) {
-  char* path_copy;
-  char* name;
-  
-  int parent_inum = parse_path_parent(path, &path_copy, &name);
-  if (parent_inum < 0) {
-    printf("unlink(%s) -> %d\n", path, parent_inum);
-    return parent_inum;
+  if (path[0] != '/' || strrchr(path, '/') != path) {
+    return -ENOENT;
   }
 
-  inode_t* parent = get_inode(parent_inum);
+  const char* name = path + 1;
+  inode_t* parent = get_inode(0);
   
   int inum = directory_lookup(parent, name);
   if (inum < 0) {
-    free(path_copy);
     printf("unlink(%s) -> %d\n", path, -ENOENT);
     return -ENOENT;
   }
@@ -213,8 +151,6 @@ int nufs_unlink(const char* path) {
   inode_t* node = get_inode(inum);
   
   if (S_ISDIR(node->mode)) {
-    free(path_copy);
-    printf("unlink(%s) -> %d\n", path, -EISDIR);
     return -EISDIR;
   }
 
@@ -228,113 +164,45 @@ int nufs_unlink(const char* path) {
   }
 
   int rv = directory_delete(parent, name);
-  free(path_copy);
-  
   printf("unlink(%s) -> %d\n", path, rv);
   return rv;
 }
 
 int nufs_link(const char* from, const char* to) {
-  int rv = -1;
-  printf("link(%s => %s) -> %d\n", from, to, rv);
-  return rv;
+  return -EPERM;
 }
 
 int nufs_rmdir(const char* path) {
-  int rv = -1;
-  printf("rmdir(%s) -> %d\n", path, rv);
-
-  char* path_copy;
-  char* name;
-
-  int parent_inum = parse_path_parent(path, &path_copy, &name); //supplies the parent inum and name of dir to remove
-
-  inode_t* parent = get_inode(parent_inum);
-
-  int inum = directory_lookup(parent, name); //find the inum of the dir we want to remove
-
-  inode_t* dir_inode = get_inode(inum); //FINALLY the inode of the dir we want to remove
-
-  //if the dir is not empty, prevent removal
-  if (dir_inode->size > 0) {
-    free(path_copy);
-    printf("rmdir(%s) -> %d\n", path, -ENOTEMPTY);
-    return -ENOTEMPTY;
-  }
-
-  if (dir_inode != 0) {
-    free_block(dir_inode->block); //free the block and inode associated with the dir
-    free_inode(inum);
-  }
-
-  //after we free inode and block we now officially remove the directory from the parent
-
-  rv = directory_delete(parent, name);
-  free(path_copy);
-
-  printf("rmdir(%s) -> %d\n", path, rv);
-  return rv;
+  return -EPERM;
 }
 
 // implements: man 2 rename
 // called to move a file within the same filesystem
 int nufs_rename(const char* from, const char* to) {
-  char* from_copy;
-  char* from_name;
-  int from_parent_inum = parse_path_parent(from, &from_copy, &from_name);
-
-  if (from_parent_inum < 0) {
-    printf("rename(%s => %s) -> %d\n", from, to, from_parent_inum);
-    return from_parent_inum;
+  // Only allow renaming within root
+  if (from[0] != '/' || strrchr(from, '/') != from ||
+      to[0] != '/' || strrchr(to, '/') != to) {
+    return -EACCES;
   }
 
-  inode_t* from_parent = get_inode(from_parent_inum);
-  int inum = directory_lookup(from_parent, from_name);
+  const char* from_name = from + 1;
+  const char* to_name = to + 1;
+  inode_t* root = get_inode(0);
+
+  int inum = directory_lookup(root, from_name);
   if (inum < 0) {
-    free(from_copy);
-    printf("rename(%s => %s) -> %d\n", from, to, -ENOENT);
     return -ENOENT;
   }
-  char* to_copy;
-  char* to_name;
-  int to_parent_inum = parse_path_parent(to, &to_copy, &to_name);
 
-  if (to_parent_inum < 0) {
-    free(from_copy);
-    printf("rename(%s => %s) -> %d\n", from, to, to_parent_inum);
-    return to_parent_inum;
-  }
-
-  inode_t* to_parent = get_inode(to_parent_inum);
-
-  if (directory_lookup(to_parent, to_name) >= 0) {
-    free(from_copy);
-    free(to_copy);
-    printf("rename(%s => %s) -> %d\n", from, to, -EEXIST);
+  if (directory_lookup(root, to_name) >= 0) {
     return -EEXIST;
   }
 
-  int rv = directory_delete(from_parent, from_name);
-  if (rv < 0) {
-    free(from_copy);
-    free(to_copy);
-    printf("rename(%s => %s) -> %d\n", from, to, rv);
-    return rv;
-  }
+  int rv = directory_delete(root, from_name);
+  if (rv < 0) return rv;
 
-  rv = directory_put(to_parent, to_name, inum);
-  if (rv < 0) {
-    directory_put(from_parent, from_name, inum);
-    free(from_copy);
-    free(to_copy);
-    printf("rename(%s => %s) -> %d\n", from, to, rv);
-    return rv;
-  }
-
-  free(from_copy);
-  free(to_copy);
-  printf("rename(%s => %s) -> %d\n", from, to, 0);
-  return 0;
+  rv = directory_put(root, to_name, inum);
+  return rv;
 }
 
 int nufs_chmod(const char* path, mode_t mode) {

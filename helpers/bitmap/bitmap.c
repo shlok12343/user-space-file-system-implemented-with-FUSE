@@ -1,7 +1,5 @@
 /**
  * @file bitmap.c
- * @author CS3650 staff
- *
  * Bitmap implementation.
  */
 #include <stdint.h>

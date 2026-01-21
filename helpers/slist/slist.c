@@ -1,6 +1,5 @@
 /**
  * @file slist.c
- * @author CS3650 staff
  *
  * A simple linked list of strings.
  *
